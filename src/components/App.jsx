@@ -1,79 +1,69 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { AppLayout } from './App.styled';
 import { ContactForm } from './ContactForm/ContactForm';
 import { ContactList } from './ContactList/ContactList';
 
 const STORAGE_KEY = 'contacts';
 
-export class App extends Component {
-  state = {
-    contacts: [],
-    filter: '',
-  };
-
-  componentDidMount() {
+export const App = () => {
+  const [contacts, setContacts] = useState(() => {
+    // якщо в локалСторедж є контакти, додаємо їх в стейт
     const savedContacts = localStorage.getItem(STORAGE_KEY);
-
     if (savedContacts !== null) {
-      this.setState({
-        contacts: JSON.parse(savedContacts),
-      });
+      return JSON.parse(savedContacts);
     }
-  }
+    // в іншому випадку порожній масив
+    return [];
+  });
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.contacts !== this.state.contacts) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state.contacts));
-    }
-  }
+  const [filter, setFilter] = useState('');
 
-  addContact = newContact => {
-    const hasNewContactInContacts = this.state.contacts.find(
+  // Аналог componentDidUpdate
+  // якщо додали новий контакт або видалили з книги,
+  // то оновлюємо контакти в сторедж
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(contacts));
+  }, [contacts]);
+
+  // Додаємо новий контакт до стейту
+  const addContact = newContact => {
+    // Перевірка на дубль контактів
+    const hasNewContactInContacts = contacts.find(
       contact => contact.name.toLowerCase() === newContact.name.toLowerCase()
     );
 
+    // Якщо контакт вже є в книзі, то виводимо алерт
+    // в іншому випадку додаємо його до книги
     hasNewContactInContacts
       ? alert(`${newContact.name} is already in contacts`)
-      : this.setState(prevState => {
-          return {
-            contacts: [...prevState.contacts, newContact],
-          };
-        });
+      : setContacts(prevState => [...prevState, newContact]);
   };
 
-  deleteContact = contactId => {
-    this.setState(prevState => {
-      return {
-        contacts: prevState.contacts.filter(item => item.id !== contactId),
-      };
-    });
-  };
-
-  updateFilter = filterString => {
-    this.setState(() => {
-      return {
-        filter: filterString,
-      };
-    });
-  };
-
-  render() {
-    const { contacts, filter } = this.state;
-
-    return (
-      <AppLayout>
-        <h1>Phonebook</h1>
-        <ContactForm onAddContact={this.addContact} />
-
-        {contacts.length > 0 && (
-          <ContactList
-            contacts={contacts}
-            filter={filter}
-            onUpdateFilter={this.updateFilter}
-            onDelete={this.deleteContact}
-          ></ContactList>
-        )}
-      </AppLayout>
+  //Видаляємо контакт з книги за айді
+  const deleteContact = contactId => {
+    setContacts(prevState =>
+      prevState.filter(contact => contact.id !== contactId)
     );
-  }
-}
+  };
+
+  //Додаємо фільтр в стейт
+  const updateFilter = filterString => {
+    setFilter(filterString);
+  };
+
+  return (
+    <AppLayout>
+      <h1>Phonebook</h1>
+      <ContactForm onAddContact={addContact} />
+
+      {contacts.length > 0 && (
+        <ContactList
+          contacts={contacts}
+          filter={filter}
+          onUpdateFilter={updateFilter}
+          onDelete={deleteContact}
+        ></ContactList>
+      )}
+    </AppLayout>
+  );
+};
